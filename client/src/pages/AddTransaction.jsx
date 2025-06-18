@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom"; // ✅ For routing
 
 function AddTransaction({ onAdd }) {
   const [category, setCategory] = useState("");
@@ -6,17 +7,34 @@ function AddTransaction({ onAdd }) {
   const [note, setNote] = useState("");
   const [type, setType] = useState("");
 
+  const navigate = useNavigate(); // ✅ Hook for navigation
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!category || !amount) {
-      alert("Category and Amount are required.");
+
+    if (!category || !amount || !type) {
+      alert("Category, Amount, and Type are required.");
       return;
     }
-    onAdd({ category, amount: parseFloat(amount), note, type });
+
+    const newTransaction = {
+      category,
+      amount: parseFloat(amount),
+      note,
+      type,
+    };
+
+    // Add transaction
+    onAdd(newTransaction);
+
+    // Reset form
     setCategory("");
     setAmount("");
     setNote("");
     setType("");
+
+    // ✅ Redirect to dashboard
+    navigate("/");
   };
 
   return (
@@ -70,7 +88,7 @@ function AddTransaction({ onAdd }) {
           onChange={(e) => setType(e.target.value)}
           className="w-full p-2 mb-4 border rounded"
         >
-          <option value="">Type</option>
+          <option value="">Select Type</option>
           <option value="income">Income</option>
           <option value="expense">Expense</option>
         </select>
