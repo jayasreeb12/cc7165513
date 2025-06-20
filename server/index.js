@@ -1,103 +1,65 @@
-// server.js (MongoDB version)
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-require("dotenv\config");
+const Transaction = require("./models/Transaction");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("Connected to MongoDB");
   })
-  .then(() => console.log("MongoDB connected successfully"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .catch((error) => {
+    console.error("Error connecting to MongoDB:", error);
+    process.exit(1); 
+  });
 
-// Transaction schema and model
-const transactionSchema = new mongoose.Schema({
-  category: String,
-  amount: Number,
-  note: String,
-}, { timestamps: true });
-
-const Transaction = mongoose.model("Transaction", transactionSchema);
-
-// Routes
 app.get("/", (req, res) => {
-  res.send("Finance Management API is running!");
+  res.send("API is running!");
 });
 
-// Get all transactions
+
 app.get("/api/transactions", async (req, res) => {
-  try {
-    const transactions = await Transaction.find().sort({ createdAt: -1 });
-    res.json(transactions);
-  } catch (err) {
-    res.status(500).json({ message: "Failed to fetch transactions" });
-  }
+  const transactions= await Transaction.find();
+  res.json(transactions);
 });
 
-// Get a single transaction
+
 app.get("/api/transactions/:id", async (req, res) => {
-  try {
-    const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).json({ message: "Not found" });
-    res.json(transaction);
-  } catch (err) {
-    res.status(500).json({ message: "Error fetching transaction" });
-  }
+  const transaction= await Transaction.findById(req.params.id);
+  if(transaction) res.json(transaction);
+  else res.status(404).json({ message: "Transaction not found" });
 });
 
-// Add a new transaction
+
 app.post("/api/transactions", async (req, res) => {
-  try {
-    const newTx = new Transaction(req.body);
-    const saved = await newTx.save();
-    res.status(201).json(saved);
-  } catch (err) {
-    res.status(400).json({ message: "Failed to add transaction" });
-  }
+  const newTransaction = new Transaction(req.body);
+  await newTransaction.save();
+  res.status(201).json({ message: "Transaction added successfully", transaction: newTransaction });
 });
 
-// Update a transaction
+
 app.put("/api/transactions/:id", async (req, res) => {
-  try {
-    const updated = await Transaction.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ message: "Not found" });
-    res.json(updated);
-  } catch (err) {
-    res.status(400).json({ message: "Failed to update" });
-  }
+  await Transaction.findByIdAndUpdate(req.params.id, req.body);
+  res.json({ message: "Transaction updated successfully" });
 });
 
-// Delete a transaction
+
 app.delete("/api/transactions/:id", async (req, res) => {
-  try {
-    const deleted = await Transaction.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ message: "Not found" });
-    res.json({ message: "Deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: "Failed to delete" });
-  }
+  await Transaction.findByIdAndDelete(req.params.id);
+  res.json({ message: "Transaction deleted successfully" });
 });
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
