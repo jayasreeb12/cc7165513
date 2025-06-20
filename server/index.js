@@ -1,20 +1,33 @@
+// server.js (MongoDB version)
 const express = require("express");
 const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
+const mongoose = require("mongoose");
+require("dotenv\config");
 
 const app = express();
-const PORT = 5000;
-const DATA_PATH = path.join(__dirname, "data", "transactions.json");
+const PORT = process.env.PORT || 5000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Helper functions
-const readTransactions = () => JSON.parse(fs.readFileSync(DATA_PATH));
-const writeTransactions = (data) => {
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
-};
+// MongoDB connection
+mongoose
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("MongoDB connected successfully"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// Transaction schema and model
+const transactionSchema = new mongoose.Schema({
+  category: String,
+  amount: Number,
+  note: String,
+}, { timestamps: true });
+
+const Transaction = mongoose.model("Transaction", transactionSchema);
 
 // Routes
 app.get("/", (req, res) => {
@@ -22,58 +35,64 @@ app.get("/", (req, res) => {
 });
 
 // Get all transactions
-app.get("/api/transactions", (req, res) => {
+app.get("/api/transactions", async (req, res) => {
   try {
-    const transactions = readTransactions();
+    const transactions = await Transaction.find().sort({ createdAt: -1 });
     res.json(transactions);
-  } catch (error) {
-    res.status(500).json({ message: "Error reading transactions data" });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch transactions" });
   }
 });
 
-// Get single transaction by ID
-app.get("/api/transactions/:id", (req, res) => {
-  const transactions = readTransactions();
-  const transaction = transactions.find((t) => t.id === parseInt(req.params.id));
-  if (transaction) {
+// Get a single transaction
+app.get("/api/transactions/:id", async (req, res) => {
+  try {
+    const transaction = await Transaction.findById(req.params.id);
+    if (!transaction) return res.status(404).json({ message: "Not found" });
     res.json(transaction);
-  } else {
-    res.status(404).json({ message: "Transaction not found" });
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching transaction" });
   }
 });
 
 // Add a new transaction
-app.post("/api/transactions", (req, res) => {
-  const transactions = readTransactions();
-  const newTransaction = {
-    id: Date.now(),
-    ...req.body
-  };
-  transactions.push(newTransaction);
-  writeTransactions(transactions);
-  res.status(201).json(newTransaction);
+app.post("/api/transactions", async (req, res) => {
+  try {
+    const newTx = new Transaction(req.body);
+    const saved = await newTx.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    res.status(400).json({ message: "Failed to add transaction" });
+  }
 });
 
 // Update a transaction
-app.put("/api/transactions/:id", (req, res) => {
-  let transactions = readTransactions();
-  const id = parseInt(req.params.id);
-  transactions = transactions.map((t) =>
-    t.id === id ? { ...t, ...req.body } : t
-  );
-  writeTransactions(transactions);
-  res.json({ message: "Transaction updated successfully" });
+app.put("/api/transactions/:id", async (req, res) => {
+  try {
+    const updated = await Transaction.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Not found" });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: "Failed to update" });
+  }
 });
 
 // Delete a transaction
-app.delete("/api/transactions/:id", (req, res) => {
-  let transactions = readTransactions();
-  transactions = transactions.filter((t) => t.id !== parseInt(req.params.id));
-  writeTransactions(transactions);
-  res.json({ message: "Transaction deleted successfully" });
+app.delete("/api/transactions/:id", async (req, res) => {
+  try {
+    const deleted = await Transaction.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Not found" });
+    res.json({ message: "Deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to delete" });
+  }
 });
 
-// Fallback route
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
