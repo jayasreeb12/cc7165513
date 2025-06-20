@@ -1,89 +1,86 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
-function TransactionCard({ index, category, amount, note, type, onDelete, onEdit }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ category, amount, note, type });
+function TransactionCard() {
+  const [transactions, setTransactions] = useState([]);
 
-  const handleEditClick = () => {
-    setIsEditing(true);
-  };
+  // Fetch all transactions from MongoDB backend
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/transactions`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch transactions");
+        return res.json();
+      })
+      .then((data) => {
+        setTransactions(data);
+      })
+      .catch((error) => {
+        console.error("Error fetching transactions:", error);
+        alert("Failed to fetch transactions");
+      });
+  }, []);
 
-  const handleSave = () => {
-    onEdit(index, {
-      category: editForm.category,
-      amount: parseFloat(editForm.amount),
-      note: editForm.note,
-      type: editForm.type,
-    });
-    setIsEditing(false);
+  // Delete transaction from MongoDB
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this transaction?");
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/transactions/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete transaction");
+
+      // Update UI
+      setTransactions(transactions.filter((t) => t._id !== id));
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Failed to delete transaction");
+    }
   };
 
   return (
-    <div className="p-4 rounded shadow-md bg-white text-black">
-      {isEditing ? (
-        <div className="flex flex-col gap-2">
-          {/* Category Select Dropdown */}
-          <select
-            value={editForm.category}
-            onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-            className="border p-1 rounded"
-          >
-            <option value="House Expenses">House Expenses</option>
-            <option value="Rent">Rent</option>
-            <option value="Office">Office</option>
-            <option value="Other">Other</option>
-          </select>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4 text-blue-700">All Transactions</h1>
 
-          {/* Amount Input */}
-          <input
-            type="number"
-            value={editForm.amount}
-            onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-            className="border p-1 rounded"
-          />
-
-          {/* Note Input */}
-          <input
-            type="text"
-            value={editForm.note}
-            onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
-            className="border p-1 rounded"
-          />
-
-          {/* Type Select Dropdown */}
-          <select
-            value={editForm.type}
-            onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
-            className="border p-1 rounded"
-          >
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-          </select>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <button onClick={handleSave} className="bg-blue-600 text-white px-3 py-1 rounded">
-              Save
-            </button>
-            <button onClick={() => setIsEditing(false)} className="bg-gray-500 text-white px-3 py-1 rounded">
-              Cancel
-            </button>
-          </div>
-        </div>
+      {transactions.length === 0 ? (
+        <p>No transactions found.</p>
       ) : (
-        <div>
-          <p><strong>Category:</strong> {category}</p>
-          <p><strong>Amount:</strong> ₹{amount}</p>
-          <p><strong>Note:</strong> {note}</p>
-          <p><strong>Type:</strong> {type}</p>
-          <div className="flex gap-2 mt-2">
-            <button onClick={handleEditClick} className="bg-blue-600 text-white px-3 py-1 rounded">
-              Edit
-            </button>
-            <button onClick={() => onDelete(index)} className="bg-red-600 text-white px-3 py-1 rounded">
-              Delete
-            </button>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+            <thead className="bg-blue-100 text-blue-700">
+              <tr>
+                <th className="py-2 px-4 text-left">Category</th>
+                <th className="py-2 px-4 text-left">Amount</th>
+                <th className="py-2 px-4 text-left">Note</th>
+                <th className="py-2 px-4 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((t) => (
+                <tr key={t._id} className="border-t">
+                  <td className="py-2 px-4">{t.category}</td>
+                  <td className="py-2 px-4">₹ {t.amount}</td>
+                  <td className="py-2 px-4">{t.note}</td>
+                  <td className="py-2 px-4 flex gap-2">
+                    <Link
+                      to={`/edit/${t._id}`}
+                      className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded"
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(t._id)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

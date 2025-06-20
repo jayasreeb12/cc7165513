@@ -4,13 +4,24 @@ function UserSetup({ setUser }) {
   const [name, setName] = useState("");
   const [id, setId] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!name || !id) {
       alert("Both name and ID are required.");
       return;
     }
-    setUser({ name, id });
+
+    const newUser = { name, id };
+    
+    try {
+     
+      localStorage.setItem("user", JSON.stringify(newUser));
+      setUser(newUser);
+    } catch (error) {
+      console.error("Failed to save user:", error);
+      alert("Could not save user. Please try again.");
+    }
   };
 
   return (
@@ -19,7 +30,10 @@ function UserSetup({ setUser }) {
         onSubmit={handleSubmit}
         className="bg-white p-6 rounded shadow-md max-w-sm w-full border border-blue-200"
       >
-        <h1 className="text-2xl font-bold mb-4 text-center text-blue-700">Enter User Details</h1>
+        <h1 className="text-2xl font-bold mb-4 text-center text-blue-700">
+          Enter User Details
+        </h1>
+
         <label className="block mb-1 font-medium">Name</label>
         <input
           type="text"
@@ -28,6 +42,7 @@ function UserSetup({ setUser }) {
           className="w-full p-2 mb-4 border rounded"
           placeholder="Enter your name"
         />
+
         <label className="block mb-1 font-medium">ID</label>
         <input
           type="text"
@@ -36,6 +51,7 @@ function UserSetup({ setUser }) {
           className="w-full p-2 mb-4 border rounded"
           placeholder="Enter your ID"
         />
+
         <button
           type="submit"
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded w-full"
