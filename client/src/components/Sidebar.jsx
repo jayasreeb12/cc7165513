@@ -18,9 +18,7 @@ function Sidebar() {
         <Link to="/" className={`rounded px-4 py-2 flex items-center gap-2 ${isActive("/")}`}>
           <FaChartLine /> Dashboard
         </Link>
-        <Link to="/transactions" className={`rounded px-4 py-2 flex items-center gap-2 ${isActive("/transactions")}`}>
-          <FaList /> All Transactions
-        </Link>
+        
         <Link to="/add" className={`rounded px-4 py-2 flex items-center gap-2 ${isActive("/add")}`}>
           <FaPlus /> Add Transaction
         </Link>
