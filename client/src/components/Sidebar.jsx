@@ -6,7 +6,7 @@ function Sidebar() {
 
   const isActive = (path) =>
     location.pathname === path
-      ? "bg-blue-700 text-white"
+      ? "bg-blue-200 text-white"
       : "text-blue-700 hover:bg-blue-100";
 
   return (
